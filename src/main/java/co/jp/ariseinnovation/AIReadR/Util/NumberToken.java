@@ -1,4 +1,5 @@
 package co.jp.ariseinnovation.AIReadR.Util;
+こていしさんだいちょう　
 
 /**
  * 日付文字列から抽出された数値トークンを管理するクラス

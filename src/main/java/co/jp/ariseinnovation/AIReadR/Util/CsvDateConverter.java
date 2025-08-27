@@ -32,7 +32,7 @@ public class CsvDateConverter {
      */
     public static void convertCsvDates(String inputFilePath, String outputFilePath, List<String> targetColumns) throws Exception {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(inputFilePath), StandardCharsets.UTF_8));
-             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFilePath), StandardCharsets.UTF_8))) {
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFilePath), StandardCharsets.UTF_8))) {
             
             String line = reader.readLine();
             if (line == null) {
@@ -82,7 +82,20 @@ public class CsvDateConverter {
                     }
                 }
                 
-                if (label != null && targetColumns.contains(label) && valueIndex < fields.length) {
+                // ラベル正規化
+                String normalizedLabel = normalizeLabel(label);
+                
+                // ターゲット名と正規化・厳密一致で判定
+                boolean isTarget = false;
+                for (String t : targetColumns) {
+                    String nt = normalizeLabel(t);
+                    if (normalizedLabel.equals(nt)) {
+                        isTarget = true;
+                        break;
+                    }
+                }
+                
+                if (isTarget && valueIndex < fields.length) {
                     String original = fields[valueIndex] == null ? "" : fields[valueIndex];
                     String normalized = normalizeOcrDateString(original);
                     if (!normalized.isEmpty()) {
@@ -90,7 +103,7 @@ public class CsvDateConverter {
                             String convertedDate = convertWarekiToSeireki(normalized);
                             if (convertedDate != null) {
                                 convertedFields[valueIndex] = convertedDate;
-                                System.out.println("変換: " + label + " = '" + original + "' → '" + convertedDate + "'");
+                                System.out.println("変換: " + normalizedLabel + " = '" + original + "' → '" + convertedDate + "'");
                             }
                         } catch (Exception e) {
                             System.err.println("警告: '" + original + "' を変換できませんでした: " + e.getMessage());
@@ -160,6 +173,21 @@ public class CsvDateConverter {
         s = s.replaceAll("\\.(?=\\.)", ".");
         s = s.replaceAll("\\.$", "");
         return s;
+    }
+    
+    /**
+     * ラベルの正規化
+     * 例: "供給", "供給 " -> "共用", "目標", "目標 " -> "目標", 空白除去
+     */
+    private static String normalizeLabel(String s) {
+        if (s == null) return "";
+        String x = s.trim();
+        if (x.equalsIgnoreCase("null")) return "";
+        x = x.replace(" ", "");
+        // 全角スペース除去のみ
+        x = x.replace('　', ' ');
+        x = x.replace("　", "");
+        return x;
     }
     
     private static String[] parseCsvLine(String csvLine) {
