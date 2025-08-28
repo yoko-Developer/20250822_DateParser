@@ -108,8 +108,6 @@ public class DateParser
 
     private static DateTime ParseInner(String src, DateTime basisDate)
     {
-        // デバッグ追加
-        System.out.println("DEBUG: Received input string: " + src);
         if (AIReadEEUtil.isNullOrEmpty(src))
         {
             return null;
@@ -153,7 +151,8 @@ public class DateParser
                     {
                         numberWordJoin += nt.tokenAsString;
                     }
-                    originalNumberTokensBeforeReadonly = new NumberToken[] { new NumberToken(numberWordJoin) };
+                    originalNumberTokensBeforeReadonly = new NumberToken[] {
+                        new NumberToken(numberWordJoin) };
             	}
             	else
             	{
