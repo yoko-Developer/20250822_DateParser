@@ -55,6 +55,7 @@ public class NumberToken {
      * @return 含まれている場合true
      */
     public boolean HasAfter(String word) {
+
         return afterWord != null && afterWord.contains(word);
     }
 

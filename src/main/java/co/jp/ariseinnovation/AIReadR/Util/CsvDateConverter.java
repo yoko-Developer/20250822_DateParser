@@ -145,6 +145,12 @@ public class CsvDateConverter {
         if (src == null) return "";
         String s = src.trim();
         if (s.isEmpty()) return s;
+
+        // 漢字の年号をアルファベットに変換	s = s.replace('\u3000', ' ');
+        s = s.replace("平", "H");	    s = s.replace(" ", "");
+        s = s.replace("昭", "S");	    s = s.replace("年", ".");
+        s = s.replace("令", "R");
+
         // 全角→半角などは DateParser 内でも処理するが、ここでも軽く正規化
         s = s.replace('\u3000', ' ');
         s = s.replace(" ", "");
