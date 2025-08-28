@@ -121,7 +121,7 @@ public class CsvDateConverter {
             throw new Exception("CSVファイルの読み書きでエラーが発生しました", e);
         }
     }
-    
+
     /**
      * 和暦の日付文字列を西暦のYYYYMM形式に変換する
      */
@@ -129,14 +129,38 @@ public class CsvDateConverter {
         if (warekiDate == null || warekiDate.trim().isEmpty()) {
             return null;
         }
+
+        String s = warekiDate.trim();
+
+        // 和暦の年号と年を直接解析して西暦に変換
+        if (s.startsWith("R") || s.startsWith("H") || s.startsWith("S")) {
+            String gengo = s.substring(0, 1);
+            int year = Integer.parseInt(s.substring(1));
+
+            int seireki_base_year;
+            if (gengo.equals("R")) {
+                seireki_base_year = 2018; // 令和
+            } else if (gengo.equals("H")) {
+                seireki_base_year = 1988; // 平成
+            } else if (gengo.equals("S")) {
+                seireki_base_year = 1925; // 昭和
+            } else {
+                return null; // 認識できない年号
+            }
+
+            int seireki = seireki_base_year + year;
+            return String.valueOf(seireki);
+        }
+
+        // 上記の和暦パターンに該当しない場合は、元の DateParser を使用
         try {
-            DateTime parsedDate = DateParser.Parse(warekiDate.trim());
+            DateTime parsedDate = DateParser.Parse(s);
             return parsedDate.toString(OUTPUT_FORMATTER);
         } catch (Exception e) {
-            return null;
+            return null; // 変換できない場合はnullを返す
         }
     }
-    
+
     /**
      * OCR表記ゆれの正規化
      * 例: "H10 5" -> "H10.5", "H106" -> "H10.6", 全角/デリミタ混在を統一
@@ -145,12 +169,6 @@ public class CsvDateConverter {
         if (src == null) return "";
         String s = src.trim();
         if (s.isEmpty()) return s;
-
-        // 漢字の年号をアルファベットに変換	s = s.replace('\u3000', ' ');
-        s = s.replace("平", "H");	    s = s.replace(" ", "");
-        s = s.replace("昭", "S");	    s = s.replace("年", ".");
-        s = s.replace("令", "R");
-
         // 全角→半角などは DateParser 内でも処理するが、ここでも軽く正規化
         s = s.replace('\u3000', ' ');
         s = s.replace(" ", "");
