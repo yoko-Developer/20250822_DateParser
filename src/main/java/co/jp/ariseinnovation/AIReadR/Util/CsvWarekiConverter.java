@@ -1,5 +1,7 @@
 package co.jp.ariseinnovation.AIReadR.Util;
 
+import org.joda.time.DateTime;
+
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -161,13 +163,38 @@ public class CsvWarekiConverter {
      */
     private static String convertToYearMonth(String src) {
         String trimmed = src == null ? "" : src.trim();
-        if (trimmed.isEmpty()) return trimmed;
-        
-        try {
-            return DateParser.Parse(trimmed);
-        } catch (Exception e) {
-            // 変換できない場合は元の値を返す
+        if (trimmed.isEmpty()) {
             return trimmed;
+        }
+
+        // 年号と年を抽出
+        if (trimmed.matches("^[HSR](\\d{1,2}).(\\d{1,2})")) {
+            String gengo = trimmed.substring(0, 1);
+            int year = Integer.parseInt(trimmed.substring(1, trimmed.indexOf(".")));
+            String month = trimmed.substring(trimmed.indexOf(".") + 1);
+
+            int seireki;
+            if (gengo.equals("H")) {
+                seireki = year + 1988;
+            } else if (gengo.equals("S")) {
+                seireki = year + 1925;
+            } else if (gengo.equals("R")) {
+                seireki = year + 2018;
+            } else {
+                return trimmed; // 認識できない年号はそのまま
+            }
+            return String.valueOf(seireki) + month;
+
+        } else {
+            try {
+                // DateParser.Parse は DateTime オブジェクトを返すので、toString() で文字列に変換する
+                DateTime parsedDate = DateParser.Parse(trimmed);
+                // YYYYMM の形式で出力
+                return parsedDate.toString("yyyyMM");
+            } catch (Exception e) {
+                // 変換できない場合は元の値を返す
+                return trimmed;
+            }
         }
     }
 
