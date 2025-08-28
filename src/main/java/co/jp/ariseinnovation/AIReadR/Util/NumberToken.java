@@ -1,15 +1,14 @@
 package co.jp.ariseinnovation.AIReadR.Util;
-こていしさんだいちょう　
 
 /**
  * 日付文字列から抽出された数値トークンを管理するクラス
  */
 public class NumberToken {
-    
+
     public final int token;
     public final String tokenAsString;
     public final String afterWord;
-    
+
     /**
      * 数値のみのコンストラクタ
      * @param token 数値
@@ -19,7 +18,7 @@ public class NumberToken {
         this.tokenAsString = String.valueOf(token);
         this.afterWord = "";
     }
-    
+
     /**
      * 文字列から数値を抽出するコンストラクタ
      * @param tokenAsString 数値文字列
@@ -29,7 +28,7 @@ public class NumberToken {
         this.token = Integer.parseInt(tokenAsString);
         this.afterWord = "";
     }
-    
+
     /**
      * 数値と後続文字列を指定するコンストラクタ
      * @param tokenAsString 数値文字列
@@ -40,7 +39,7 @@ public class NumberToken {
         this.token = Integer.parseInt(tokenAsString);
         this.afterWord = afterWord;
     }
-    
+
     /**
      * デフォルトコンストラクタ
      */
@@ -49,7 +48,7 @@ public class NumberToken {
         this.tokenAsString = "0";
         this.afterWord = "";
     }
-    
+
     /**
      * 後続文字列に指定の文字が含まれているかチェック
      * @param word チェックする文字
@@ -58,7 +57,7 @@ public class NumberToken {
     public boolean HasAfter(String word) {
         return afterWord != null && afterWord.contains(word);
     }
-    
+
     /**
      * 配列を作成するファクトリメソッド
      * @param tokens 数値の配列
@@ -71,7 +70,7 @@ public class NumberToken {
         }
         return result;
     }
-    
+
     /**
      * 配列を作成するファクトリメソッド（文字列版）
      * @param tokens 数値文字列の配列
@@ -84,7 +83,7 @@ public class NumberToken {
         }
         return result;
     }
-    
+
     /**
      * 配列を作成するファクトリメソッド（NumberToken版）
      * @param tokens NumberTokenの配列
@@ -93,7 +92,7 @@ public class NumberToken {
     public static NumberToken[] CreateArray(NumberToken... tokens) {
         return tokens;
     }
-    
+
     /**
      * 混合型の配列を作成するファクトリメソッド（String, String, int）
      * @param first 最初の文字列
@@ -103,12 +102,12 @@ public class NumberToken {
      */
     public static NumberToken[] CreateArray(String first, String second, int third) {
         return new NumberToken[] {
-            new NumberToken(first),
-            new NumberToken(second),
-            new NumberToken(third)
+                new NumberToken(first),
+                new NumberToken(second),
+                new NumberToken(third)
         };
     }
-    
+
     /**
      * 混合型の配列を作成するファクトリメソッド（String, String, NumberToken）
      * @param first 最初の文字列
@@ -118,12 +117,12 @@ public class NumberToken {
      */
     public static NumberToken[] CreateArray(String first, String second, NumberToken third) {
         return new NumberToken[] {
-            new NumberToken(first),
-            new NumberToken(second),
-            third
+                new NumberToken(first),
+                new NumberToken(second),
+                third
         };
     }
-    
+
     /**
      * 混合型の配列を作成するファクトリメソッド（NumberToken, NumberToken, int）
      * @param first 最初のNumberToken
@@ -133,12 +132,12 @@ public class NumberToken {
      */
     public static NumberToken[] CreateArray(NumberToken first, NumberToken second, int third) {
         return new NumberToken[] {
-            first,
-            second,
-            new NumberToken(third)
+                first,
+                second,
+                new NumberToken(third)
         };
     }
-    
+
     /**
      * 混合型の配列を作成するファクトリメソッド（int, NumberToken, NumberToken）
      * @param first 最初の数値
@@ -148,12 +147,12 @@ public class NumberToken {
      */
     public static NumberToken[] CreateArray(int first, NumberToken second, NumberToken third) {
         return new NumberToken[] {
-            new NumberToken(first),
-            second,
-            third
+                new NumberToken(first),
+                second,
+                third
         };
     }
-    
+
     /**
      * 混合型の配列を作成するファクトリメソッド（NumberToken, String, String）
      * @param first 最初のNumberToken
@@ -163,9 +162,9 @@ public class NumberToken {
      */
     public static NumberToken[] CreateArray(NumberToken first, String second, String third) {
         return new NumberToken[] {
-            first,
-            new NumberToken(second),
-            new NumberToken(third)
+                first,
+                new NumberToken(second),
+                new NumberToken(third)
         };
     }
 }
