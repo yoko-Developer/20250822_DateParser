@@ -20,9 +20,9 @@ import org.joda.time.format.DateTimeFormatter;
  * CSVファイルの和暦データを西暦に変換するユーティリティクラス
  */
 public class CsvDateConverter {
-    
+
     private static final DateTimeFormatter OUTPUT_FORMATTER = DateTimeFormat.forPattern("yyyyMM");
-    
+
     /**
      * CSVファイルの指定された列(名称)の和暦データを西暦に変換する
      * @param inputFilePath 入力CSVファイルのパス
@@ -32,19 +32,19 @@ public class CsvDateConverter {
      */
     public static void convertCsvDates(String inputFilePath, String outputFilePath, List<String> targetColumns) throws Exception {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(inputFilePath), StandardCharsets.UTF_8));
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFilePath), StandardCharsets.UTF_8))) {
-            
+             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFilePath), StandardCharsets.UTF_8))) {
+
             String line = reader.readLine();
             if (line == null) {
                 throw new IllegalArgumentException("CSVファイルが空です");
             }
-            
+
             // ヘッダー行を解析して列のインデックスを取得
             String[] headers = parseCsvLine(line);
             int itemNameIndex = -1;
             int keyWordIndex = -1;
             int valueIndex = -1;
-            
+
             for (int i = 0; i < headers.length; i++) {
                 if ("ItemName".equals(headers[i])) {
                     itemNameIndex = i;
@@ -54,23 +54,23 @@ public class CsvDateConverter {
                     valueIndex = i;
                 }
             }
-            
+
             if (valueIndex == -1) {
                 throw new IllegalArgumentException("Value列が見つかりません");
             }
             if (itemNameIndex == -1 && keyWordIndex == -1) {
                 throw new IllegalArgumentException("ItemName列またはKeyWord列が見つかりません");
             }
-            
+
             // ヘッダー行を出力
             writer.write(line);
             writer.newLine();
-            
+
             // データ行を処理
             while ((line = reader.readLine()) != null) {
                 String[] fields = parseCsvLine(line);
                 String[] convertedFields = Arrays.copyOf(fields, headers.length);
-                
+
                 String label = null;
                 if (keyWordIndex != -1 && keyWordIndex < fields.length) {
                     label = fields[keyWordIndex];
@@ -81,10 +81,10 @@ public class CsvDateConverter {
                         label = fields[itemNameIndex];
                     }
                 }
-                
+
                 // ラベル正規化
                 String normalizedLabel = normalizeLabel(label);
-                
+
                 // ターゲット名と正規化・厳密一致で判定
                 boolean isTarget = false;
                 for (String t : targetColumns) {
@@ -94,7 +94,7 @@ public class CsvDateConverter {
                         break;
                     }
                 }
-                
+
                 if (isTarget && valueIndex < fields.length) {
                     String original = fields[valueIndex] == null ? "" : fields[valueIndex];
                     String normalized = normalizeOcrDateString(original);
@@ -110,13 +110,13 @@ public class CsvDateConverter {
                         }
                     }
                 }
-                
+
                 writer.write(convertToCsvLine(convertedFields));
                 writer.newLine();
             }
-            
+
             System.out.println("変換が完了しました。出力ファイル: " + outputFilePath);
-            
+
         } catch (IOException e) {
             throw new Exception("CSVファイルの読み書きでエラーが発生しました", e);
         }
@@ -129,35 +129,11 @@ public class CsvDateConverter {
         if (warekiDate == null || warekiDate.trim().isEmpty()) {
             return null;
         }
-
-        String s = warekiDate.trim();
-
-        // 和暦の年号と年を直接解析して西暦に変換
-        if (s.startsWith("R") || s.startsWith("H") || s.startsWith("S")) {
-            String gengo = s.substring(0, 1);
-            int year = Integer.parseInt(s.substring(1));
-
-            int seireki_base_year;
-            if (gengo.equals("R")) {
-                seireki_base_year = 2018; // 令和
-            } else if (gengo.equals("H")) {
-                seireki_base_year = 1988; // 平成
-            } else if (gengo.equals("S")) {
-                seireki_base_year = 1925; // 昭和
-            } else {
-                return null; // 認識できない年号
-            }
-
-            int seireki = seireki_base_year + year;
-            return String.valueOf(seireki);
-        }
-
-        // 上記の和暦パターンに該当しない場合は、元の DateParser を使用
         try {
-            DateTime parsedDate = DateParser.Parse(s);
+            DateTime parsedDate = DateParser.Parse(warekiDate.trim());
             return parsedDate.toString(OUTPUT_FORMATTER);
         } catch (Exception e) {
-            return null; // 変換できない場合はnullを返す
+            return null;
         }
     }
 
@@ -198,7 +174,7 @@ public class CsvDateConverter {
         s = s.replaceAll("\\.$", "");
         return s;
     }
-    
+
     /**
      * ラベルの正規化
      * 例: "供給", "供給 " -> "共用", "目標", "目標 " -> "目標", 空白除去
@@ -213,7 +189,7 @@ public class CsvDateConverter {
         x = x.replace("　", "");
         return x;
     }
-    
+
     private static String[] parseCsvLine(String csvLine) {
         List<String> fields = new ArrayList<>();
         StringBuilder currentField = new StringBuilder();
@@ -232,7 +208,7 @@ public class CsvDateConverter {
         fields.add(currentField.toString());
         return fields.toArray(new String[0]);
     }
-    
+
     private static String convertToCsvLine(String[] fields) {
         StringBuilder csvLine = new StringBuilder();
         for (int i = 0; i < fields.length; i++) {
@@ -246,7 +222,7 @@ public class CsvDateConverter {
         }
         return csvLine.toString();
     }
-    
+
     public static void main(String[] args) {
         if (args.length < 3) {
             System.out.println("使用方法: java CsvDateConverter <入力ファイル> <出力ファイル> <列名1> [列名2] ...");
