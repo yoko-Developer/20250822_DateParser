@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,7 +32,8 @@ public class CsvDateConverter {
      * @throws Exception 変換処理でエラーが発生した場合
      */
     public static void convertCsvDates(String inputFilePath, String outputFilePath, List<String> targetColumns) throws Exception {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(inputFilePath), StandardCharsets.UTF_8));
+        // 文字コード指定変更
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(inputFilePath), Charset.forName("Shift_JIS")));
              BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFilePath), StandardCharsets.UTF_8))) {
 
             String line = reader.readLine();
@@ -229,14 +231,17 @@ public class CsvDateConverter {
             System.out.println("例: java CsvDateConverter input.csv output.csv 取得 使用 事業共用日 共用日 契約開始日 事業共用");
             return;
         }
-        String inputFile = args[0];
-        String outputFile = args[1];
+
+        // 読取り、出力ファイルを追加
+        String inputFilePath = "固定資産\\input\\" + args[0];
+        String outputFilePath = "固定資産\\output\\" + args[1];
+
         List<String> targetColumns = new ArrayList<>();
         for (int i = 2; i < args.length; i++) {
             targetColumns.add(args[i]);
         }
         try {
-            convertCsvDates(inputFile, outputFile, targetColumns);
+            convertCsvDates(inputFilePath, outputFilePath, targetColumns);
         } catch (Exception e) {
             System.err.println("エラーが発生しました: " + e.getMessage());
             e.printStackTrace();
