@@ -12,6 +12,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -32,7 +34,6 @@ public class CsvDateConverter {
      * @throws Exception 変換処理でエラーが発生した場合
      */
     public static void convertCsvDates(String inputFilePath, String outputFilePath, List<String> targetColumns) throws Exception {
-        // 文字コード指定変更
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(inputFilePath), Charset.forName("Shift_JIS")));
              BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFilePath), StandardCharsets.UTF_8))) {
 
@@ -100,14 +101,24 @@ public class CsvDateConverter {
                 if (isTarget && valueIndex < fields.length) {
                     String original = fields[valueIndex] == null ? "" : fields[valueIndex];
                     String normalized = normalizeOcrDateString(original);
+
                     if (!normalized.isEmpty()) {
                         try {
                             String convertedDate = convertWarekiToSeireki(normalized);
+
                             if (convertedDate != null) {
+                                // 成功した場合だけ変換
                                 convertedFields[valueIndex] = convertedDate;
                                 System.out.println("変換: " + normalizedLabel + " = '" + original + "' → '" + convertedDate + "'");
+                            } else {
+                                // 変換できない場合は元の値をそのまま残す
+                                convertedFields[valueIndex] = original;
+                                System.out.println("未変換: " + normalizedLabel + " = '" + original + "'（元の値を保持）");
                             }
+
                         } catch (Exception e) {
+                            // エラー時も元の値を保持
+                            convertedFields[valueIndex] = original;
                             System.err.println("警告: '" + original + "' を変換できませんでした: " + e.getMessage());
                         }
                     }
@@ -126,60 +137,96 @@ public class CsvDateConverter {
 
     /**
      * 和暦の日付文字列を西暦のYYYYMM形式に変換する
+     * - 元号が見つからなければ **変換せず元の文字列をそのまま返す**
+     * - 元号が文字列中にある場合は、その位置以降を切り出して正規化して DateParser に渡す
      */
     public static String convertWarekiToSeireki(String warekiDate) {
-        if (warekiDate == null || warekiDate.trim().isEmpty()) {
-            return null;
+        if (warekiDate == null) {
+            return null; // 呼び出し側の既存コードが null を特別扱いしている場合を考慮（ただし後述の呼び出し変更でnullはほぼ使わなくする）
         }
+        String original = warekiDate;
+        String s = warekiDate.trim();
+        if (s.isEmpty()) {
+            return original;
+        }
+
+        // --- 元号を本文中から探す（大文字小文字問わず、漢字・アルファベット両対応）
+        Pattern gengoPat = Pattern.compile("(昭和|平成|令和|昭|平|令|S|H|R|L)", Pattern.CASE_INSENSITIVE);
+        Matcher m = gengoPat.matcher(s);
+        if (!m.find()) {
+            // 元号が見つからない -> 変換しない（元の値をそのまま返す）
+            return original;
+        }
+
+        // 元号位置以降だけ切り出す（DateParserは先頭に元号があることを期待する）
+        String sub = s.substring(m.start());
+
+        // --- 簡易正規化（OCRゆらぎ対応）
+        sub = sub.replace('　', ' '); // 全角スペース
+        sub = sub.replaceAll("\\s+", ""); // 空白除去
+        // 全角数字を半角に
+        sub = sub.replace("０","0").replace("１","1").replace("２","2").replace("３","3").replace("４","4")
+                .replace("５","5").replace("６","6").replace("７","7").replace("８","8").replace("９","9");
+        // 元 -> 1
+        sub = sub.replace("元", "1");
+        // 区切り文字を統一（カンマやスラッシュやハイフンをピリオドに）
+        sub = sub.replace("，", ".").replace(",", ".").replace("/", ".").replace("-", ".").replace("／", ".");
+        // 連続ピリオドや先頭・末尾のピリオドを整理
+        sub = sub.replaceAll("\\.{2,}", ".").replaceAll("^\\.|\\.$", "");
+
+        // ここで sub は例えば "平3.4.30" や "S53.2.28" のようになっているはず
         try {
-            DateTime parsedDate = DateParser.Parse(warekiDate.trim());
-            return parsedDate.toString(OUTPUT_FORMATTER);
+            DateTime parsedDate = DateParser.Parse(sub);
+            return parsedDate.toString(OUTPUT_FORMATTER); // "yyyyMM"
         } catch (Exception e) {
-            return null;
+            // パース失敗 → 変換しない（元の値を返す）
+            return original;
         }
     }
 
     /**
      * OCR表記ゆれの正規化
-     * 例: "H10 5" -> "H10.5", "H106" -> "H10.6", 全角/デリミタ混在を統一
      */
     private static String normalizeOcrDateString(String src) {
         if (src == null) return "";
         String s = src.trim();
         if (s.isEmpty()) return s;
-        // 全角→半角などは DateParser 内でも処理するが、ここでも軽く正規化
-        s = s.replace('\u3000', ' ');
-        s = s.replace(" ", "");
-        s = s.replace("年", ".");
-        s = s.replace("月", ".");
-        s = s.replace("日", "");
-        s = s.replace("/", ".");
-        s = s.replace("-", ".");
-        s = s.replace("..", ".");
-        // H106 -> H10.6 のように、元号+2桁年+1〜2桁月/日 っぽい場合に区切り挿入
-        // まず元号プレフィックス
-        if (s.matches("^[RrHhSs]\\d{3,4}$")) {
-            // 例: H106, H1006
-            String era = s.substring(0,1);
-            String nums = s.substring(1);
-            if (nums.length() == 3) {
-                // yyM -> yy.M
-                s = era + nums.substring(0,2) + "." + nums.substring(2);
-            } else if (nums.length() == 4) {
-                // yyMd -> yy.MM? ここでは yy.Md として DateParser に渡す
-                s = era + nums.substring(0,2) + "." + nums.substring(2);
-            }
+
+        // 年号のアルファベットまたは漢字で始まらない場合は、元の文字列を返す
+        if (!s.matches("^[RrHhSs昭平令].*")) {
+            return src;
         }
-        // H10 5 / H10. 5 などの空白や余計なピリオドを整理
-        s = s.replaceAll("\\.\\.", ".");
-        s = s.replaceAll("\\.(?=\\.)", ".");
-        s = s.replaceAll("\\.$", "");
+
+        // 全角スペースを半角スペースに変換
+        s = s.replace('　', ' ');
+        s = s.replace(" ", "");
+
+        // 漢字の年号をアルファベットに変換
+        s = s.replace("昭和", "S");
+        s = s.replace("平成", "H");
+        s = s.replace("令和", "R");
+        s = s.replace("昭", "S");
+        s = s.replace("平", "H");
+        s = s.replace("令", "R");
+        s = s.replace("元", "1");
+
+        // 全角数字を半角に変換
+        s = s.replace("０", "0").replace("１", "1").replace("２", "2").replace("３", "3").replace("４", "4")
+                .replace("５", "5").replace("６", "6").replace("７", "7").replace("８", "8").replace("９", "9");
+
+        // デリミタを統一的な「.」に変換
+        s = s.replace("年", ".").replace("月", ".").replace("日", "");
+        s = s.replace("/", ".").replace("-", ".");
+
+        // 連続したピリオドや前後のピリオドを整理
+        s = s.replaceAll("\\.{2,}", ".");
+        s = s.replaceAll("^\\.|\\.$", "");
+
         return s;
     }
 
     /**
      * ラベルの正規化
-     * 例: "供給", "供給 " -> "共用", "目標", "目標 " -> "目標", 空白除去
      */
     private static String normalizeLabel(String s) {
         if (s == null) return "";
@@ -228,11 +275,10 @@ public class CsvDateConverter {
     public static void main(String[] args) {
         if (args.length < 3) {
             System.out.println("使用方法: java CsvDateConverter <入力ファイル> <出力ファイル> <列名1> [列名2] ...");
-            System.out.println("例: java CsvDateConverter input.csv output.csv 取得 使用 事業共用日 共用日 契約開始日 事業共用");
             return;
         }
 
-        // 読取り、出力ファイルを追加
+        // ファイルパスを修正
         String inputFilePath = "固定資産\\input\\" + args[0];
         String outputFilePath = "固定資産\\output\\" + args[1];
 
